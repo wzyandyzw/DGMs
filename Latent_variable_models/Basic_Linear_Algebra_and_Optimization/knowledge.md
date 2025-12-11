@@ -1,5 +1,5 @@
 # 知识点1：半正定矩阵
-实对称矩阵$\mathbf{A} \in \mathbb{R}^{n \times n}$是半正定（PSD）的，当且仅当对所有$\mathbf{x} \in \mathbb{R}^n$，都有$\mathbf{x}^\top \mathbf{A}\mathbf{x} \geq 0$。等价地，所有特征值均非负的实对称矩阵是半正定矩阵。若$\mathbf{A}$是半正定的，我们记$\mathbf{A} \succeq 0$；若$\mathbf{A} - \mathbf{B}$是半正定的，我们记$\mathbf{A} \succeq \mathbf{B}$。
+实对称矩阵$\mathbf{A} \in \mathbb{R}^{n \times n}$是半正定（PSD）的，当且仅当对所有$\mathbf{x} \in \mathbb{R}^n$，都有$\mathbf{x}^\top \mathbf{A}\mathbf{x} \geq 0$。若$\mathbf{A}$是半正定的，我们记$\mathbf{A} \succeq 0$；若$\mathbf{A} - \mathbf{B}$是半正定的，我们记$\mathbf{A} \succeq \mathbf{B}$。等价地，所有特征值均非负的实对称矩阵是半正定矩阵。
 
 
 # 知识点2：矩阵的迹、范数和基本性质

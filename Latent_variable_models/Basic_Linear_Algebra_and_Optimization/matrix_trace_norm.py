@@ -6,11 +6,14 @@ def matrix_trace(matrix: np.ndarray) -> float:
     计算矩阵的迹
     
     参数:
-    matrix: np.ndarray - 输入矩阵
+    matrix: np.ndarray - 输入矩阵（可以是标量）
     
     返回:
     float - 矩阵的迹（对角线元素之和）
     """
+    if matrix.ndim < 2:
+        # 如果是标量或向量，直接返回其值
+        return float(matrix)
     return np.trace(matrix)
 
 

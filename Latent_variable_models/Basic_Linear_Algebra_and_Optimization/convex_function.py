@@ -1,5 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
+# 设置Matplotlib支持中文显示
+plt.rcParams['font.sans-serif'] = ['SimHei']  # 使用黑体
+plt.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
 
 
 def is_convex(f, x, y, alpha: float = 0.5, tol: float = 1e-8) -> bool:

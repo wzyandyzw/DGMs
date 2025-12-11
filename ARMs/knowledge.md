@@ -282,3 +282,199 @@ $$p_{\alpha, \mathbf{A}, \mathbf{b}}(Y=1|\mathbf{x}) = \sigma\left(\alpha_0 + \s
 - Figure from *The Neural Autoregressive Distribution Estimator*, AISTATS'11
 ![figure14](./figure/figure14.png)
 
+### General discrete distributions
+
+- How to model non-binary discrete random variables \( X_i \in \{1, 2, ..., K\} \)? E.g., pixel intensities varying from 0 to 255
+- One solution: Let \( \hat{\mathbf{x}}_i \) parameterize a categorical distribution
+  \[
+  \mathbf{h}_i = \sigma(\mathbf{W}_{<<i}\mathbf{x}_{<<i} + \mathbf{c}) \quad (\sigma \text{ is applied element-wise})
+  \]
+  \[
+  \hat{\mathbf{x}}_i := [p_{i,1}, ..., p_{i,K}]^\top = \text{softmax}(\mathbf{D}_i\mathbf{h}_i + \mathbf{b}_i)
+  \]
+  \[
+  p(x_i|x_1, ..., x_{i-1}) = \text{Cat}(\hat{\mathbf{x}}_i)
+  \]
+- Softmax generalizes the sigmoid/logistic function \( \sigma(\cdot) \) and transforms a vector in \( \mathbb{R}^K \) into a vector of \( K \) probabilities (non-negative, sum to 1):
+  \[
+  \text{softmax}(\mathbf{a}) = \left[ \frac{\exp(a_1)}{\sum_{j=1}^K \exp(a_j)}, \dots, \frac{\exp(a_K)}{\sum_{j=1}^K \exp(a_j)} \right]^\top
+  \]
+- Note: If \( \mathbf{h}_i \in \mathbb{R}^d \), we have \( \mathbf{D}_i \in \mathbb{R}^{K \times d} \), \( \mathbf{b}_i \in \mathbb{R}^K \), \( \mathbf{W} \in \mathbb{R}^{d \times n} \), and \( \mathbf{c} \in \mathbb{R}^d \)
+
+
+### Real-valued NADE (RNADE)
+
+- How to model continuous random variables \( X_i \in \mathbb{R} \)? E.g., speech signals
+- Solution: Let \( \hat{\mathbf{x}}_i \) parameterize a continuous distribution
+- E.g., uniform mixture of \( K \) Gaussians, see Neural Autoregressive Distribution Estimation, JMLR'16
+![figure15](./figure/figure15.png)
+
+
+### Real-valued NADE (RNADE)
+
+- How to model continuous random variables \( X_i \in \mathbb{R} \)? E.g., speech signals
+- Solution: Let \( \hat{\mathbf{x}}_i \) parameterize a continuous distribution
+- E.g., uniform mixture of \( K \) Gaussians
+  \[
+  \mathbf{h}_i = \sigma(\mathbf{W}_{<<i}\mathbf{x}_{<<i} + \mathbf{c}) \quad (\sigma \text{ is applied element-wise})
+  \]
+  \[
+  \hat{\mathbf{x}}_i := [\mu_{i,1}, ..., \mu_{i,K}, \sigma^2_{i,1}, ..., \sigma^2_{i,K}]^\top = \mathbf{g}_\phi(\mathbf{h}_i)
+  \]
+  \[
+  p(x_i|x_1, ..., x_{i-1}) = p_{\hat{\mathbf{x}}_i}(x_i) := \sum_{j=1}^K \frac{1}{K} \mathcal{N}(x_i; \mu_{i,j}, \sigma^2_{i,j})
+  \]
+- \( \mathbf{g}_\phi \) is a neural network parameterized by \( \phi \)
+
+
+### ARMs vs. autoencoders
+
+![figure16](./figure/figure16.png)
+
+- On the surface, FVSBN and NADE look similar to an autoencoder:
+  - An encoder \( E(\cdot) \). E.g., \( E(\mathbf{x}) = \sigma(\mathbf{W}_2\sigma(\mathbf{W}_1\mathbf{x} + \mathbf{b}_1) + \mathbf{b}_2) \)
+  - A decoder \( D(\cdot) \) s.t. \( D(E(\mathbf{x})) \approx \mathbf{x} \). E.g., \( D(\mathbf{h}) = \sigma(\mathbf{V}\mathbf{h} + \mathbf{c}) \)
+- Loss function for dataset \( \mathcal{D} \):
+  \[
+  \min_{\mathbf{W}_1,\mathbf{W}_2,\mathbf{b}_1,\mathbf{b}_2,\mathbf{V},\mathbf{c}} \sum_{\mathbf{x} \in \mathcal{D}} \sum_i \left( -x_i \log(\hat{x}_i) - (1 - x_i) \log(1 - \hat{x}_i) \right) \quad (\text{binary r.v.})
+  \]
+  \[
+  \min_{\mathbf{W}_1,\mathbf{W}_2,\mathbf{b}_1,\mathbf{b}_2,\mathbf{V},\mathbf{c}} \sum_{\mathbf{x} \in \mathcal{D}} \sum_i (x_i - \hat{x}_i)^2 \quad (\text{continuous r.v.})
+  \]
+- \( E \) and \( D \) are constrained so that we do not learn identity mappings
+- A vanilla autoencoder is not a generative model: It does not define a distribution over \( \mathbf{x} \) we can sample from to generate new data points
+
+
+### Autoregressive autoencoders
+
+- On the surface, FVSBN and NADE look similar to an autoencoder. Can we get a generative model from an autoencoder?
+- We need to make sure it corresponds to a valid Bayesian Network (DAG structure), i.e., we need an ordering for chain rule. If ordering is 1, 2, 3, then:
+  - \( \hat{x}_1 \) cannot depend on any input \( \mathbf{x} = (x_1, x_2, x_3) \). Then at generation time we do not need any input to get started
+  - \( \hat{x}_2 \) can only depend on \( x_1 \)
+  - \( \hat{x}_3 \) can only depend on \( x_1, x_2 \)
+
+### MADE: Masked autoencoder for distribution estimation
+
+![figure17](./figure/figure17.png)
+
+
+- **Challenge**: An autoencoder that is autoregressive (DAG structure)
+- **Solution**: Use masks to disallow certain paths (Germain et al., 2015)
+- **Suppose ordering is \( x_2, x_3, x_1 \), with \( p(x_1, x_2, x_3) = p(x_2)p(x_3|x_2)p(x_1|x_2, x_3) \)**
+  - The unit producing the parameters for \( \hat{x_2} = p(x_2) \) is not allowed to depend on any input. Unit for \( p(x_3|x_2) \) only on \( x_2 \). And so on...
+  - For each unit in a hidden layer, pick a random integer \( i \) in \( [1, n-1] \). That unit is allowed to depend only on the first \( i \) inputs (according to the chosen ordering)
+  - Add mask to preserve this invariant: Connect to all units in previous layer with smaller or equal assigned number (strictly \( < \) in final layer)
+
+
+### RNNs: Recurrent neural nets
+
+- **Challenge**: Model \( p(x_t|x_{1:t-1}; \alpha_t) \). "History" keeps getting longer
+- **Idea**: keep a summary and recursively update it
+
+
+![figure18](./figure/figure18.png)
+
+
+Summary update rule: \( h_{t+1} = \tanh(W_{hh}h_t + W_{xh}x_{t+1}) \)
+Prediction: \( o_{t+1} = W_{hy}h_{t+1} \)
+Summary initialization: \( h_0 = b_0 \)
+
+- Hidden layer \( h_t \) is a summary of the inputs seen till time \( t \)
+- Output layer \( o_{t-1} \) specifies parameters for conditional \( p(x_t|x_{1:t-1}) \)
+- Parameterized by \( b_0 \) (initialization), and matrices \( W_{hh}, W_{xh}, W_{hy} \). Constant number of parameters w.r.t \( n! \)
+
+
+### Example: Character RNN (from Andrej Karpathy)
+
+![figure19](./figure/figure19.png)
+
+1. Suppose \( x_i \in \{h, e, l, o\} \). Use one-hot encoding:
+   - \( h \) encoded as \( [1, 0, 0, 0] \), \( e \) encoded as \( [0, 1, 0, 0] \), etc.
+2. **Autoregressive**:
+   \( p(x = hello) = p(x_1 = h)p(x_2 = e|x_1 = h)p(x_3 = l|x_1 = h, x_2 = e)\cdots p(x_5 = o|x_1 = h, x_2 = e, x_3 = l, x_4 = l) \)
+3. For example:
+   \[
+   p(x_2 = e|x_1 = h) = \text{softmax}(o_1) = \frac{\exp(2.2)}{\exp(1.0) + \cdots + \exp(4.1)}
+   \]
+   \( o_1 = W_{hy}h_1 \)
+   \( h_1 = \tanh(W_{hh}h_0 + W_{xh}x_1) \)
+
+
+### RNNs: Recurrent neural nets
+
+![figure20](./figure/figure20.png)
+
+- **Pros**:
+  - Can be applied to sequences of arbitrary length
+  - Very general: For every computable function, there exists a finite RNN that can compute it
+- **Cons**:
+  - Still requires an ordering
+  - Sequential likelihood evaluation (very slow for training)
+  - Sequential generation (unavoidable in an autoregressive model)
+
+
+### Example: Character RNN (from Andrej Karpathy)
+
+Train 3-layer RNN with 512 hidden nodes on all the works of Shakespeare. Then sample from the model:
+
+```
+KING LEAR: O, if you were a feeble sight, the courtesy of your law,
+Your sight and several breath, will wear the gods
+With his heads, and my hands are wonder'd at the deeds,
+So drop upon your lordship's head, and your opinion
+Shall be against your honour.
+```
+
+**Note**: generation happens **character by character**. Needs to learn valid words, grammar, punctuation, etc.
+
+
+
+
+
+## Example: Character RNN (from Andrej Karpathy)
+
+Train on Wikipedia. Then sample from the model:
+
+> Naturalism and decision for the majority of Arab countries' capitalide was grounded by the Irish language by [[John Clair]], [[An Imperial Japanese Revolt]], associated with Guangzham's sovereignty. His generals were the powerful ruler of the Portugal in the [[Protestant Immineners]], which could be said to be directly in Cantonese Communication, which followed a ceremony and set inspired prison, training. The emperor travelled back to [[Antioch, Perth, October 25—21]] to note, the Kingdom of Costa Rica, unsuccessful fashioned the [[Thrales]], [[Cynth's Dajoard]], known in western [[Scotland]], near Italy to the conquest of India with the conflict.
+
+
+**Note**: correct Markdown syntax. Opening and closing of brackets [[;]]
+
+
+## Example: Character RNN (from Andrej Karpathy)
+
+Train on data set of baby names. Then sample from the model:
+
+> Rudi Levette Berice Lussa Hany Mareanne Chrestina Carissy Marylen Hammine Janye Marlise Jacacrie Hendred Romand Charienna Nenotto Ette Dorane Wallen Marly Darine Salina Elvyn Ersia Maralena Minoria El-lia Charmin Antley Nerille Chelon Walmor Evena Jerlyl Stachon Charisa Allisa Anatha Cathanie Geetra Alexie Jerin Cassen Herbett Cossie Vel-en Daurenge Robester Shermond Terisa Licia Roselen Ferine Jayn Lusine Charyanne Sales Sanny Resa Wallon Martine Merus Jelen Candica Wallin Tel Rachene Tarine Ozila Ketia Shanne Arnande Karella Roselina Alessia Chasty Deland Berther Geamar Jackein Mellisand Sagdy Nenc Lessie Rasemy Guen Gavi Milea Anneda Margoris Janin Rodelin Zeanna Elyne Janah Ferzina Susta Pey Castina
+
+
+## Issues with RNNs
+
+![figure21](./figure/figure21.png)
+
+- A single hidden vector needs to summarize all the (growing) history. For example, \( h^{(4)} \) needs to summarize the meaning of "My friend opened the"
+- Sequential evaluation, cannot be parallelized
+- Exploding/vanishing gradients when accessing information from many steps back
+
+
+## Attention based models
+
+![figure22](./figure/figure22.png)
+
+- Attention mechanism to compare a query vector to a set of key vectors
+  - Compare current hidden state (query) to all past hidden states (keys), e.g., by taking a dot product
+  - Construct attention distribution to figure out what parts of the history are relevant, e.g., via a softmax
+  - Construct a summary of the history, e.g., by weighted sum
+  - Use summary and current hidden state to predict next token/word
+
+
+## Generative Transformers
+
+![figure23](./figure/figure23.png)
+
+- Current state of the art (GPTs): replace RNN with Transformer
+  - Attention mechanisms to adaptively focus only on relevant context
+  - Avoid recursive computation. Use only self-attention to enable parallelization
+  - Needs masked self-attention to preserve autoregressive structure
+  - Demo: https://banana-projects-transformer-autocomplete.hf.space/doc/gpt2-large
+  - Demo: https://huggingface.co/spaces/huggingface-projects/llama-2-13b-chat

@@ -39,8 +39,8 @@ def solve_with_scipy():
     # 初始猜测
     x0 = [0, 0]
     
-    # 求解优化问题
-    result = minimize(objective_function, x0, constraints=constraints)
+    # 求解优化问题，使用SLSQP求解器以获取拉格朗日乘子
+    result = minimize(objective_function, x0, constraints=constraints, method='SLSQP')
     
     print(f"优化结果：")
     print(f"最优解 x* = {result.x}")
@@ -72,9 +72,12 @@ def verify_kkt_conditions(result):
     grad_g1 = np.array([1, 1])  # ∇g₁(x) = [1, 1]
     grad_h1 = np.array([1, 0])  # ∇h₁(x) = [1, 0]
     
-    # 拉格朗日乘子
-    u1 = result.lagrangian_multipliers[0]  # 不等式约束的乘子
-    v1 = result.lagrangian_multipliers[1]  # 等式约束的乘子
+    # 拉格朗日乘子 - SLSQP求解器将乘子存储在jac属性中
+    # jac属性包含目标函数的梯度和约束条件的梯度
+    # 对于SLSQP，result.jac的结构是：[目标函数梯度, 不等式约束1梯度, ..., 等式约束1梯度, ...]
+    # 但是我们需要的是乘子，它们存储在result.lambda_中
+    u1 = result.lambda_[0]  # 不等式约束的乘子
+    v1 = result.lambda_[1]  # 等式约束的乘子
     
     print(f"1. 驻点条件：∇f(x*) + u₁∇g₁(x*) + v₁∇h₁(x*) = 0")
     print(f"   ∇f(x*) = {grad_f}")

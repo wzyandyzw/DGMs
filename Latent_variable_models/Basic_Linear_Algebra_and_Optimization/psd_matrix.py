@@ -25,7 +25,8 @@ def is_psd(matrix: np.ndarray, tol: float = 1e-8) -> bool:
 
 def verify_psd_definition(matrix: np.ndarray, num_tests: int = 100, tol: float = 1e-8) -> bool:
     """
-    通过定义验证矩阵是否为半正定矩阵：对任意向量x，检查x^T A x >= 0
+    通过定义验证矩阵是否为半正定矩阵：对任意向量x，检查x^T A x >= 0, 本判断无法做到数学上的严格成立，
+    只能在数值上进行验证，通过生成多个随机向量进行测试。
     
     参数:
     matrix: np.ndarray - 输入矩阵
